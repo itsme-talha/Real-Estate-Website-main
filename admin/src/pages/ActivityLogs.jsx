@@ -1,0 +1,523 @@
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  CalendarIcon,
+  FunnelIcon,
+  ArrowDownTrayIcon,
+  MagnifyingGlassIcon,
+  EyeIcon,
+  ExclamationTriangleIcon
+} from '@heroicons/react/24/outline';
+import ActivityLogDetailModal from '../components/ActivityLogDetailModal';
+import apiClient from '../services/apiClient';
+
+const ActivityLogs = () => {
+  const [logs, setLogs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [pagination, setPagination] = useState({});
+  const [selectedLog, setSelectedLog] = useState(null);
+
+  // Filter states
+  const [filters, setFilters] = useState({
+    action: '',
+    targetType: '',
+    adminEmail: '',
+    startDate: '',
+    endDate: '',
+    page: 1,
+    limit: 20
+  });
+  const [showFilters, setShowFilters] = useState(false);
+  const [exporting, setExporting] = useState(false);
+
+  // Action and target type options
+  const actionOptions = [
+    { value: '', label: 'All Actions' },
+    { value: 'approve_property', label: 'Approve Property' },
+    { value: 'reject_property', label: 'Reject Property' },
+    { value: 'delete_property', label: 'Delete Property' },
+    { value: 'bulk_approve_properties', label: 'Bulk Approve Properties' },
+    { value: 'bulk_reject_properties', label: 'Bulk Reject Properties' },
+    { value: 'bulk_delete_properties', label: 'Bulk Delete Properties' },
+    { value: 'suspend_user', label: 'Suspend User' },
+    { value: 'ban_user', label: 'Ban User' },
+    { value: 'unban_user', label: 'Unban User' },
+    { value: 'delete_user', label: 'Delete User' },
+    { value: 'bulk_suspend_users', label: 'Bulk Suspend Users' },
+    { value: 'bulk_ban_users', label: 'Bulk Ban Users' }
+  ];
+
+  const targetTypeOptions = [
+    { value: '', label: 'All Types' },
+    { value: 'property', label: 'Property' },
+    { value: 'user', label: 'User' },
+    { value: 'appointment', label: 'Appointment' }
+  ];
+
+  // Fetch activity logs
+  const fetchLogs = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const queryParams = new URLSearchParams();
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value) queryParams.append(key, value);
+      });
+
+      const response = await apiClient.get(`/api/admin/activity-logs?${queryParams}`);
+      const data = response.data;
+      setLogs(data.logs || []);
+      setPagination(data.pagination || {});
+    } catch (err) {
+      console.error('Error fetching activity logs:', err);
+      setError(`Failed to load activity logs. ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Export CSV
+  const handleExport = async () => {
+    try {
+      setExporting(true);
+
+      const queryParams = new URLSearchParams();
+      // Remove pagination for export (get all matching records)
+      const exportFilters = { ...filters };
+      delete exportFilters.page;
+      delete exportFilters.limit;
+
+      Object.entries(exportFilters).forEach(([key, value]) => {
+        if (value) queryParams.append(key, value);
+      });
+
+      const response = await apiClient.get(`/api/admin/activity-logs/export?${queryParams}`, {
+        responseType: 'blob',
+      });
+
+      // Download file
+      const blob = response.data;
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `activity-logs-${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (err) {
+      console.error('Error exporting logs:', err);
+      setError('Failed to export logs. Please try again.');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  // Handle filter changes
+  const handleFilterChange = (key, value) => {
+    setFilters(prev => ({
+      ...prev,
+      [key]: value,
+      page: 1 // Reset to first page when filtering
+    }));
+  };
+
+  // Handle pagination
+  const handlePageChange = (newPage) => {
+    setFilters(prev => ({
+      ...prev,
+      page: newPage
+    }));
+  };
+
+  // Clear filters
+  const clearFilters = () => {
+    setFilters({
+      action: '',
+      targetType: '',
+      adminEmail: '',
+      startDate: '',
+      endDate: '',
+      page: 1,
+      limit: 20
+    });
+  };
+
+  // Get action badge color (Updated for Dark Theme)
+  const getActionBadgeColor = (action) => {
+    if (action.includes('approve')) return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30';
+    if (action.includes('reject')) return 'bg-red-500/10 text-red-400 border-red-500/30';
+    if (action.includes('delete')) return 'bg-red-500/10 text-red-400 border-red-500/30';
+    if (action.includes('suspend') || action.includes('ban')) return 'bg-amber-500/10 text-amber-400 border-amber-500/30';
+    if (action.includes('unban')) return 'bg-sky-500/10 text-sky-400 border-sky-500/30';
+    if (action.includes('bulk')) return 'bg-purple-500/10 text-purple-400 border-purple-500/30';
+    return 'bg-white/5 text-white/70 border-white/10';
+  };
+
+  // Get target type badge color (Updated for Dark Theme)
+  const getTargetTypeBadgeColor = (targetType) => {
+    switch (targetType) {
+      case 'property': return 'bg-[#154D57] text-[#B7A08B] border-[#B7A08B]/30';
+      case 'user': return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30';
+      case 'appointment': return 'bg-amber-500/10 text-amber-400 border-amber-500/30';
+      default: return 'bg-white/5 text-white/70 border-white/10';
+    }
+  };
+
+  // Format action display name
+  const formatActionName = (action) => {
+    return action.split('_').map(word =>
+      word.charAt(0).toUpperCase() + word.slice(1)
+    ).join(' ');
+  };
+
+  // Format date
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZoneName: 'short'
+    });
+  };
+
+  useEffect(() => {
+    fetchLogs();
+  }, [filters]);
+
+  // Report error to parent/toast system
+  useEffect(() => {
+    if (error) {
+      console.error('Activity Logs Error:', error);
+    }
+  }, [error]);
+
+  return (
+    <div className="p-6">
+      {/* Header */}
+      <div className="mb-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-white">Activity Logs</h1>
+            <p className="text-[#B7A08B] mt-1 text-sm">
+              Comprehensive audit trail of all administrative actions
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className={`px-4 py-2 rounded-lg border transition-colors duration-200 ${
+                showFilters
+                  ? 'bg-[#B7A08B] text-[#154D57] border-[#B7A08B] shadow-sm'
+                  : 'bg-[#12434D] text-white border-[#B7A08B]/30 hover:border-[#B7A08B] hover:bg-[#B7A08B]/10'
+              }`}
+            >
+              <FunnelIcon className="w-4 h-4 inline mr-2" />
+              Filters
+            </button>
+
+            <button
+              onClick={handleExport}
+              disabled={exporting || logs.length === 0}
+              className="px-4 py-2 bg-[#B7A08B] text-[#154D57] rounded-lg hover:bg-white font-medium
+                       disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 shadow-md"
+            >
+              <ArrowDownTrayIcon className="w-4 h-4 inline mr-2" />
+              {exporting ? 'Exporting...' : 'Export CSV'}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Filters Panel */}
+      <AnimatePresence>
+        {showFilters && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="mb-6 bg-[#0F3B43] rounded-xl border border-[#B7A08B]/30 p-5 shadow-inner"
+          >
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {/* Action Filter */}
+              <div>
+                <label className="block text-sm font-medium text-white/80 mb-2">
+                  Action
+                </label>
+                <select
+                  value={filters.action}
+                  onChange={(e) => handleFilterChange('action', e.target.value)}
+                  className="w-full px-3 py-2 bg-[#12434D] border border-[#B7A08B]/30 rounded-lg text-white
+                             focus:ring-1 focus:ring-[#B7A08B] focus:border-[#B7A08B] outline-none"
+                >
+                  {actionOptions.map(option => (
+                    <option key={option.value} value={option.value} className="bg-[#12434D] text-white">
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Target Type Filter */}
+              <div>
+                <label className="block text-sm font-medium text-white/80 mb-2">
+                  Target Type
+                </label>
+                <select
+                  value={filters.targetType}
+                  onChange={(e) => handleFilterChange('targetType', e.target.value)}
+                  className="w-full px-3 py-2 bg-[#12434D] border border-[#B7A08B]/30 rounded-lg text-white
+                             focus:ring-1 focus:ring-[#B7A08B] focus:border-[#B7A08B] outline-none"
+                >
+                  {targetTypeOptions.map(option => (
+                    <option key={option.value} value={option.value} className="bg-[#12434D] text-white">
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Admin Email Filter */}
+              <div>
+                <label className="block text-sm font-medium text-white/80 mb-2">
+                  Admin Email
+                </label>
+                <input
+                  type="email"
+                  value={filters.adminEmail}
+                  onChange={(e) => handleFilterChange('adminEmail', e.target.value)}
+                  placeholder="admin@buildestate.com"
+                  className="w-full px-3 py-2 bg-[#12434D] border border-[#B7A08B]/30 rounded-lg text-white placeholder:text-white/30
+                             focus:ring-1 focus:ring-[#B7A08B] focus:border-[#B7A08B] outline-none"
+                />
+              </div>
+
+              {/* Start Date */}
+              <div>
+                <label className="block text-sm font-medium text-white/80 mb-2">
+                  Start Date
+                </label>
+                <input
+                  type="date"
+                  value={filters.startDate}
+                  onChange={(e) => handleFilterChange('startDate', e.target.value)}
+                  className="w-full px-3 py-2 bg-[#12434D] border border-[#B7A08B]/30 rounded-lg text-white
+                             focus:ring-1 focus:ring-[#B7A08B] focus:border-[#B7A08B] outline-none [color-scheme:dark]"
+                />
+              </div>
+
+              {/* End Date */}
+              <div>
+                <label className="block text-sm font-medium text-white/80 mb-2">
+                  End Date
+                </label>
+                <input
+                  type="date"
+                  value={filters.endDate}
+                  onChange={(e) => handleFilterChange('endDate', e.target.value)}
+                  className="w-full px-3 py-2 bg-[#12434D] border border-[#B7A08B]/30 rounded-lg text-white
+                             focus:ring-1 focus:ring-[#B7A08B] focus:border-[#B7A08B] outline-none [color-scheme:dark]"
+                />
+              </div>
+
+              {/* Clear Filters */}
+              <div className="flex items-end">
+                <button
+                  onClick={clearFilters}
+                  className="w-full px-4 py-2 text-white/80 bg-[#12434D] border border-[#B7A08B]/30 rounded-lg
+                             hover:bg-[#B7A08B]/20 hover:border-[#B7A08B] transition-colors duration-200"
+                >
+                  Clear Filters
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Content */}
+      {loading ? (
+        <div className="bg-[#12434D] rounded-xl border border-[#B7A08B]/20 p-6 shadow-xl">
+          <div className="animate-pulse space-y-4">
+            {[...Array(10)].map((_, i) => (
+              <div key={i} className="flex items-center space-x-4">
+                <div className="h-4 bg-[#B7A08B]/20 rounded w-24"></div>
+                <div className="h-4 bg-[#B7A08B]/20 rounded w-32"></div>
+                <div className="h-4 bg-[#B7A08B]/20 rounded w-20"></div>
+                <div className="h-4 bg-[#B7A08B]/20 rounded w-40"></div>
+                <div className="h-4 bg-[#B7A08B]/20 rounded w-16"></div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : error ? (
+        <div className="bg-[#12434D] rounded-xl border border-[#B7A08B]/20 p-6 shadow-xl">
+          <div className="text-center">
+            <ExclamationTriangleIcon className="w-12 h-12 text-red-400 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-white mb-2">Error Loading Logs</h3>
+            <p className="text-[#B7A08B] mb-4">{error}</p>
+            <button
+              onClick={() => fetchLogs()}
+              className="px-4 py-2 bg-[#B7A08B] text-[#154D57] font-medium rounded-lg hover:bg-white transition-colors duration-200"
+            >
+              Try Again
+            </button>
+          </div>
+        </div>
+      ) : logs.length === 0 ? (
+        <div className="bg-[#12434D] rounded-xl border border-[#B7A08B]/20 p-6 shadow-xl">
+          <div className="text-center">
+            <MagnifyingGlassIcon className="w-12 h-12 text-[#B7A08B]/50 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-white mb-2">No Activity Logs Found</h3>
+            <p className="text-[#B7A08B] mb-4 text-sm">
+              {Object.values(filters).some(v => v && v !== 1 && v !== 20)
+                ? 'No logs match your current filters.'
+                : 'No administrative actions have been recorded yet.'
+              }
+            </p>
+            {Object.values(filters).some(v => v && v !== 1 && v !== 20) && (
+              <button
+                onClick={clearFilters}
+                className="px-4 py-2 bg-[#B7A08B] text-[#154D57] font-medium rounded-lg hover:bg-white transition-colors duration-200"
+              >
+                Clear Filters
+              </button>
+            )}
+          </div>
+        </div>
+      ) : (
+        <div className="bg-[#12434D] rounded-xl border border-[#B7A08B]/20 overflow-hidden shadow-xl">
+          {/* Table */}
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-[#0F3B43] border-b border-[#B7A08B]/30">
+                <tr>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-[#B7A08B] uppercase tracking-wider">
+                    Timestamp
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-[#B7A08B] uppercase tracking-wider">
+                    Admin
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-[#B7A08B] uppercase tracking-wider">
+                    Action
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-[#B7A08B] uppercase tracking-wider">
+                    Target
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-[#B7A08B] uppercase tracking-wider">
+                    Details
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-[#B7A08B] uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#B7A08B]/10">
+                {logs.map((log) => (
+                  <tr key={log._id} className="hover:bg-[#0F3B43]/50 transition-colors duration-150">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-white/80">
+                      {formatDate(log.createdAt)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-white/90">
+                      {log.adminEmail}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`inline-flex px-2.5 py-1 text-xs font-medium rounded-full border ${getActionBadgeColor(log.action)}`}>
+                        {formatActionName(log.action)}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center space-x-2">
+                        <span className={`inline-flex px-2.5 py-1 text-xs font-medium rounded-full border ${getTargetTypeBadgeColor(log.targetType)}`}>
+                          {log.targetType}
+                        </span>
+                        {log.targetName && (
+                          <span className="text-sm text-white/60 max-w-40 truncate">
+                            {log.targetName}
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-white/60">
+                      {log.metadata?.reason && (
+                        <span className="max-w-40 truncate block">
+                          {log.metadata.reason}
+                        </span>
+                      )}
+                      {log.metadata?.count && (
+                        <span className="text-xs text-[#B7A08B]">
+                          {log.metadata.count} items
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <button
+                        onClick={() => setSelectedLog(log)}
+                        className="text-[#B7A08B] hover:text-white font-medium transition-colors"
+                      >
+                        <EyeIcon className="w-4 h-4 inline mr-1" />
+                        View Details
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Pagination */}
+          {pagination.totalPages > 1 && (
+            <div className="bg-[#0F3B43] px-6 py-4 border-t border-[#B7A08B]/30 flex items-center justify-between">
+              <div className="text-sm text-white/60">
+                Showing {((pagination.currentPage - 1) * pagination.limit) + 1} to{' '}
+                {Math.min(pagination.currentPage * pagination.limit, pagination.total)} of{' '}
+                {pagination.total} results
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => handlePageChange(pagination.currentPage - 1)}
+                  disabled={pagination.currentPage <= 1}
+                  className="px-3 py-1.5 text-sm bg-[#12434D] border border-[#B7A08B]/30 text-white rounded-md
+                             hover:bg-[#B7A08B]/20 hover:border-[#B7A08B] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                >
+                  Previous
+                </button>
+
+                <span className="px-3 py-1 text-sm text-[#B7A08B]">
+                  Page {pagination.currentPage} of {pagination.totalPages}
+                </span>
+
+                <button
+                  onClick={() => handlePageChange(pagination.currentPage + 1)}
+                  disabled={pagination.currentPage >= pagination.totalPages}
+                  className="px-3 py-1.5 text-sm bg-[#12434D] border border-[#B7A08B]/30 text-white rounded-md
+                             hover:bg-[#B7A08B]/20 hover:border-[#B7A08B] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Activity Log Detail Modal */}
+      {selectedLog && (
+        <ActivityLogDetailModal
+          isOpen={!!selectedLog}
+          log={selectedLog}
+          onClose={() => setSelectedLog(null)}
+        />
+      )}
+    </div>
+  );
+};
+
+export default ActivityLogs;
