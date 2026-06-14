@@ -19,7 +19,6 @@ const ContactFormCard: React.FC = () => {
       ...formData,
       [e.target.name]: e.target.value
     });
-    // Clear status when user starts typing again
     if (status !== 'idle') setStatus('idle');
   };
 
@@ -29,7 +28,6 @@ const ContactFormCard: React.FC = () => {
     setStatus('idle');
 
     try {
-      // Map frontend fields to backend schema
       await contactAPI.submit({
         name: `${formData.firstName} ${formData.lastName}`.trim(),
         email: formData.email,
@@ -51,13 +49,13 @@ const ContactFormCard: React.FC = () => {
   };
 
   return (
-    <div className="bg-white border border-[#E6E0DA] rounded-2xl p-8 shadow-sm">
+    <div className="bg-[#0F3B43] border border-[#B7A08B]/20 rounded-2xl p-8 shadow-xl">
       {/* Card Header */}
       <div className="mb-8">
-        <h2 className="font-syne font-bold text-2xl text-[#221410] mb-2">
+        <h2 className="font-syne font-bold text-2xl text-white mb-2">
           Send Us a Message
         </h2>
-        <p className="font-manrope font-extralight text-sm text-[#4B5563]">
+        <p className="font-manrope font-extralight text-sm text-white/70">
           Fill in the form below and our team will get back to you within 24 hours.
         </p>
       </div>
@@ -67,7 +65,7 @@ const ContactFormCard: React.FC = () => {
         {/* First Name & Last Name Row */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <label className="block font-manrope font-extralight text-xs text-[#64748B] uppercase tracking-wider mb-2">
+            <label className="block font-manrope font-bold text-xs text-[#B7A08B] uppercase tracking-wider mb-2">
               First Name
             </label>
             <input
@@ -76,13 +74,13 @@ const ContactFormCard: React.FC = () => {
               value={formData.firstName}
               onChange={handleInputChange}
               placeholder="Ali"
-              className="w-full bg-[#F5F1E8] border border-[#E6E0DA] rounded-lg px-4 py-3 font-manrope font-extralight text-sm text-[#0F172A] placeholder:text-[#94A3B8] focus:outline-none focus:border-[#D4755B] transition-colors"
+              className="w-full bg-[#12434D] border border-[#B7A08B]/20 rounded-xl px-4 py-3 font-manrope font-medium text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-[#B7A08B] focus:ring-1 focus:ring-[#B7A08B] transition-all shadow-inner"
               required
             />
           </div>
 
           <div>
-            <label className="block font-manrope font-extralight text-xs text-[#64748B] uppercase tracking-wider mb-2">
+            <label className="block font-manrope font-bold text-xs text-[#B7A08B] uppercase tracking-wider mb-2">
               Last Name
             </label>
             <input
@@ -91,7 +89,7 @@ const ContactFormCard: React.FC = () => {
               value={formData.lastName}
               onChange={handleInputChange}
               placeholder="Khan"
-              className="w-full bg-[#F5F1E8] border border-[#E6E0DA] rounded-lg px-4 py-3 font-manrope font-extralight text-sm text-[#0F172A] placeholder:text-[#94A3B8] focus:outline-none focus:border-[#D4755B] transition-colors"
+              className="w-full bg-[#12434D] border border-[#B7A08B]/20 rounded-xl px-4 py-3 font-manrope font-medium text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-[#B7A08B] focus:ring-1 focus:ring-[#B7A08B] transition-all shadow-inner"
               required
             />
           </div>
@@ -99,7 +97,7 @@ const ContactFormCard: React.FC = () => {
 
         {/* Email */}
         <div>
-          <label className="block font-manrope font-extralight text-xs text-[#64748B] uppercase tracking-wider mb-2">
+          <label className="block font-manrope font-bold text-xs text-[#B7A08B] uppercase tracking-wider mb-2">
             Email
           </label>
           <input
@@ -108,14 +106,14 @@ const ContactFormCard: React.FC = () => {
             value={formData.email}
             onChange={handleInputChange}
             placeholder="ali.khan@example.pk"
-            className="w-full bg-[#F5F1E8] border border-[#E6E0DA] rounded-lg px-4 py-3 font-manrope font-extralight text-sm text-[#0F172A] placeholder:text-[#94A3B8] focus:outline-none focus:border-[#D4755B] transition-colors"
+            className="w-full bg-[#12434D] border border-[#B7A08B]/20 rounded-xl px-4 py-3 font-manrope font-medium text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-[#B7A08B] focus:ring-1 focus:ring-[#B7A08B] transition-all shadow-inner"
             required
           />
         </div>
 
         {/* Phone Number */}
         <div>
-          <label className="block font-manrope font-extralight text-xs text-[#64748B] uppercase tracking-wider mb-2">
+          <label className="block font-manrope font-bold text-xs text-[#B7A08B] uppercase tracking-wider mb-2">
             Phone Number
           </label>
           <input
@@ -124,14 +122,14 @@ const ContactFormCard: React.FC = () => {
             value={formData.phoneNumber}
             onChange={handleInputChange}
             placeholder="+92 300 1234567"
-            className="w-full bg-[#F5F1E8] border border-[#E6E0DA] rounded-lg px-4 py-3 font-manrope font-extralight text-sm text-[#0F172A] placeholder:text-[#94A3B8] focus:outline-none focus:border-[#D4755B] transition-colors"
+            className="w-full bg-[#12434D] border border-[#B7A08B]/20 rounded-xl px-4 py-3 font-manrope font-medium text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-[#B7A08B] focus:ring-1 focus:ring-[#B7A08B] transition-all shadow-inner"
             required
           />
         </div>
 
         {/* Message */}
         <div>
-          <label className="block font-manrope font-extralight text-xs text-[#64748B] uppercase tracking-wider mb-2">
+          <label className="block font-manrope font-bold text-xs text-[#B7A08B] uppercase tracking-wider mb-2">
             Message
           </label>
           <textarea
@@ -140,7 +138,7 @@ const ContactFormCard: React.FC = () => {
             onChange={handleInputChange}
             placeholder="Tell us about your inquiry..."
             rows={5}
-            className="w-full bg-[#F5F1E8] border border-[#E6E0DA] rounded-lg px-4 py-3 font-manrope font-extralight text-sm text-[#0F172A] placeholder:text-[#94A3B8] focus:outline-none focus:border-[#D4755B] transition-colors resize-none"
+            className="w-full bg-[#12434D] border border-[#B7A08B]/20 rounded-xl px-4 py-3 font-manrope font-medium text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-[#B7A08B] focus:ring-1 focus:ring-[#B7A08B] transition-all resize-none shadow-inner"
             required
           />
         </div>
@@ -149,7 +147,7 @@ const ContactFormCard: React.FC = () => {
         <button
           type="submit"
           disabled={loading}
-          className="w-full bg-[#D4755B] hover:bg-[#C05621] disabled:opacity-60 disabled:cursor-not-allowed text-white font-manrope font-bold text-base py-3.5 rounded-xl transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
+          className="w-full bg-[#B7A08B] hover:bg-white text-[#154D57] disabled:opacity-60 disabled:cursor-not-allowed font-manrope font-bold text-base py-3.5 rounded-xl transition-all shadow-lg flex items-center justify-center gap-2"
         >
           {loading ? (
             <>
@@ -163,15 +161,15 @@ const ContactFormCard: React.FC = () => {
 
         {/* Status Message */}
         {status === 'success' && (
-          <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-lg px-4 py-3">
-            <CheckCircle className="w-5 h-5 text-green-600 shrink-0" />
-            <p className="font-manrope text-sm text-green-700">{statusMessage}</p>
+          <div className="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl px-4 py-3">
+            <CheckCircle className="w-5 h-5 text-emerald-400 shrink-0" />
+            <p className="font-manrope text-sm text-emerald-400">{statusMessage}</p>
           </div>
         )}
         {status === 'error' && (
-          <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-lg px-4 py-3">
-            <AlertCircle className="w-5 h-5 text-red-600 shrink-0" />
-            <p className="font-manrope text-sm text-red-700">{statusMessage}</p>
+          <div className="flex items-center gap-2 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
+            <AlertCircle className="w-5 h-5 text-red-400 shrink-0" />
+            <p className="font-manrope text-sm text-red-400">{statusMessage}</p>
           </div>
         )}
       </form>
